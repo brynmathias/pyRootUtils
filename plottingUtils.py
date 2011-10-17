@@ -63,19 +63,17 @@ r.gStyle.SetHatchesLineWidth(2)
 # r.gROOT.SetStyle("Plain") #To set plain bkgds for slides
 # r.gROOT.ProcessLine(".L ./Jets30/tdrstyle.C+")
 r.gStyle.SetPalette(1)
-# r.gROOT.ProcessLine(".L ./errorFun.C+")
-intlumi =35.0 #4.433 #inv pico barns
 
+def SetBatch():
+  """docstring for SetBatch"""
+  r.gROOT.SetBatch(True)
+  return True
 
-
-
-
-
-class GetSumHist(r.TObject):
+class GetSumHist(object):
   def __init__(self, File = None, Directories = None, Hist = None, Col = r.kBlack, Norm = None, LegendText = None):
     # super(GetSumHist, self).__init__()
-    r.TObject.__init__(self)
-    self.file = File
+    object.__init__(self)
+    self.files = File
     self.directories = Directories
     self.hist = Hist
     self.col = Col
@@ -87,23 +85,24 @@ class GetSumHist(r.TObject):
   """docstring for GetSumHist"""
   def returnHist(self):
     """docstring for returnHist"""
-    a = r.TFile.Open(self.file)
-    # Get The first hist in the list and clone it.
-    for Dir in self.directories:
-      hf = a.Get(Dir)
-      if not hf: print "Subdirectory %s does not exist"%(Dir)
-      h = hf.Get(self.hist)
-      if self.hObj is None:
-        self.hObj = h.Clone()
-      else: self.hObj.Add(h)
-      # Set Colours
+    if self.files is None: return self.hObj
+    for f in self.files:
+      a = r.TFile.Open(f)
+      # Get The first hist in the list and clone it.
+      for Dir in self.directories:
+        hf = a.Get(Dir)
+        if not hf: print "Subdirectory %s does not exist"%(Dir)
+        h = hf.Get(self.hist)
+        if self.hObj is None:
+          self.hObj = h.Clone()
+        else: self.hObj.Add(h)
+        # Set Colours
     self.hObj.SetLineColor(self.col)
     self.hObj.SetMarkerColor(self.col)
     # Set the last bin to show how many events in the over flow as well
     if self.norm is not None:
-      self.hObj.Scale(100./self.norm)
+      self.hObj.Scale(self.norm/100.)
     return self.hObj
-
 
   def HideOverFlow(self):
     """docstring for HideOverFlow"""
@@ -121,15 +120,43 @@ class GetSumHist(r.TObject):
     if axis is "y": self.hObj.GetYaxis().SetRangeUser(axis1,axis2)
     pass
 
-  # def setAtt(self,attr = {}):
-  #   """docstring for setAtt"""
-  #   for att, val in attr.iteritems():
-  #     if getattr(self.hObj,att):
-  #       setattr(self.hObj,att,val)
-  #     else:
-  #       print type(self.hObj), "does not have attribute %s, skipping"%(att)
-  #   pass
 
+  def Integral(self,val1,val2):
+    """docstring for Integral"""
+    bin1 = self.hObj.FindBin(val1)
+    bin2 = self.hObj.FindBin(val2)
+    return self.hObj.Integral(bin1,bin2)
+    pass
+
+  def Rebin(self,nbins,binList):
+    """docstring for Rebin"""
+    bins = array.array('d',binList)
+    tmp = self.hObj.Rebin(nbins,"tmp",bins)
+    self.hObj = tmp
+
+  def Help(self):
+    print "====================================================================================================================="
+    print "Usage is GetSumHist(File = None, Directories = None, Hist = None, Col = r.kBlack, Norm = None, LegendText = None)"
+    print "Methods are:"
+    print "\t HideOverFlow() -- Adds the over flow bin to the last bin of the histogram and computes errors for this bin"
+    print "\t SetRange(\'axis\',start,end)"
+    print "\t Draw() -- Use ROOT's draw method, has to wrap classInstance.hObj.Draw()"
+    print "====================================================================================================================="
+
+
+
+
+
+def AddHistos(List):
+  """docstring for AddHistos"""
+  hist = None
+  for H in List:
+    if hist is None:
+      hist = H.hObj.Clone()
+    else:
+      hist.Add(H,hOjb)
+  return hist
+  pass
 
 
 
