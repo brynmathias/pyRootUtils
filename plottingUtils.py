@@ -144,6 +144,75 @@ class GetSumHist(object):
     print "====================================================================================================================="
 
 
+class TurnOn(object):
+  """docstring for TurnOn"""
+  def __init__(self, Numerator, Denominator):
+    self.nom = Numerator
+    self.denom = Denominator
+    self.Title = None
+    self.xaxisTitle = None
+    self.yaxisTitle = None
+    self.TGraph = r.TGraphAsymmErrors()
+    self.xmin = None
+    self.ymin = -0.2
+    self.xmax = None
+    self.ymax = 1.2
+    self.nomClone  = None
+    self.denomClone = None
+    self.newBins = None
+  def setCanvas(self,canvas):
+    """docstring for setCanvas"""
+    canvas.cd()
+    pass
+  def setRange(self,x1,x2):
+    """docstring for SetRange"""
+    self.xmin = x1
+    self.xmax = x2
+    pass
+
+  def DifferentialTurnOn(self):
+    """docstring for DifferentialTurnOn"""
+    self.TGraph.Divide(self.nom.hObj,self.denom.hObj)
+    self.TGraph.GetXaxis().SetTitle(self.nom.hObj.GetTitle())
+    self.TGraph.GetYaxis().SetTitle("Efficiency")
+    self.TGraph.GetXaxis().SetRangeUser(self.xmin,self.xmax)
+    self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
+    self.TGraph.SetTitle("Differential turn on for %s"%(self.nom.directories))
+    return self.TGraph
+
+  def CumulativeTurnOn(self,Bins):
+    """docstring for CumulativeTurnOn"""
+    self.TGraph = r.TGraphAsymmErrors()
+    self.newBins = array.array('d',Bins)
+    self.nomClone  = self.nom
+    self.denomClone = self.denom
+    self.nomClone.Rebin(  len(Bins)-1, self.newBins)
+    self.denomClone.Rebin(len(Bins)-1, self.newBins)
+    self.TGraph.Divide(self.nomClone.hObj,self.denomClone.hObj)
+    yval = r.Double(0)
+    xval = r.Double(0)
+    self.TGraph.GetPoint(1,xval,yval)
+    self.TGraph.SetTitle("Cumulative turn on for %s, with a cut of %f, Efficiency is %f + %f - %f"%(self.nom.directories,Bins[1],yval,self.TGraph.GetErrorYhigh(1),self.TGraph.GetErrorYlow(1)))
+    self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
+    return self.TGraph
+
+
+
+
+class TurnOnPrefs(object):
+  """docstring for TurnOnPrefs"""
+  def __init__(self,File = None, NomFile = None,DenomFile = None,Variables = None,AxisRanges = None,CumCut = None):
+    self.file = File
+    self.nomFile = NomFile
+    self.denomFile = DenomFile
+    self.variables = Variables
+    self.AxisRange = AxisRanges
+    self.cutList = CumCut
+
+
+
+
+
 
 
 
@@ -154,7 +223,7 @@ def AddHistos(List):
     if hist is None:
       hist = H.hObj.Clone()
     else:
-      hist.Add(H,hOjb)
+      hist.Add(H.hOjb)
   return hist
   pass
 
@@ -216,11 +285,14 @@ def reBiner(Hist,minimum):
   nBins = -1
   for bin in range(0,Hist.GetNbinsX()):
     binC = 0
-    if Hist.GetBinContent(bin) > minimum:
+    n = Hist.GetBinContent(bin)
+    e = Hist.GetBinError(bin)
+    if e < 1: e = 1
+    if (n*n)/(e*e) > minimum:
       upArray.append(Hist.GetBinLowEdge(bin+1))
       nBins+=1
     else:
-      binC += Hist.GetBinContent(bin)
+      binC += (n*n)/(e*e)
       if binC > minimum:
         upArray.append(Hist.GetBinLowEdge(bin+1))
         nBins+=1
