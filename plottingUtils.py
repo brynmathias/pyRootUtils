@@ -32,7 +32,7 @@ def ensure_dir(path):
         pass
       else: raise
 
-r.gROOT.SetStyle("Plain") #To set plain bkgds for slides
+# r.gROOT.SetStyle("Plain") #To set plain bkgds for slides
 r.gStyle.SetTitleBorderSize(0)
 r.gStyle.SetCanvasBorderMode(0)
 r.gStyle.SetCanvasColor(0)#Sets canvas colour white
@@ -66,12 +66,11 @@ r.gStyle.SetPalette(1)
 
 def SetBatch():
   """docstring for SetBatch"""
-  r.gROOT.SetBatch(True)
-  return True
+  return r.gROOT.SetBatch(True)
 
 class GetSumHist(object):
   def __init__(self, File = None, Directories = None, Hist = None, Col = r.kBlack, Norm = None, LegendText = None):
-    # super(GetSumHist, self).__init__()
+    super(GetSumHist, self).__init__()
     object.__init__(self)
     self.files = File
     self.directories = Directories
@@ -121,6 +120,7 @@ class GetSumHist(object):
     pass
 
 
+
   def Integral(self,val1,val2):
     """docstring for Integral"""
     bin1 = self.hObj.FindBin(val1)
@@ -144,6 +144,63 @@ class GetSumHist(object):
     print "====================================================================================================================="
 
 
+
+class printPDF(object):
+  """docstring for printPDF"""
+  def __init__(self, Fname):
+    super(printPDF, self).__init__()
+    self.canvas = r.TCanvas()
+    self.fname = Fname
+    self.pageCounter = 1
+
+
+  def cd(self):
+    """docstring for cd"""
+    self.canvas.cd()
+    pass
+
+  def open(self):
+    """docstring for open"""
+    self.canvas.Print(self.fname+"[")
+    pass
+
+
+  def close(self):
+    """docstring for close"""
+    self.canvas.Print(self.fname+"]")
+    pass
+
+
+  def Clear(self):
+    """docstring for Clear"""
+    self.canvas.Clear()
+    pass
+
+  def SetLog(self,axis,BOOL):
+    """docstring for SetLog"""
+    if axis == 'x':
+      if BOOL:
+        self.canvas.SetLogx()
+      else:
+        self.canvas.SetLogx(r.kFALSE)
+    if axis == 'y':
+      if BOOL:
+        self.canvas.SetLogy()
+      else:
+        self.canvas.SetLogy(r.kFALSE)
+    pass
+
+
+  def Print(self):
+    """docstring for Print"""
+    num = r.TLatex(0.95,0.01,"%d"%(self.pageCounter))
+    num.SetNDC()
+    num.Draw("same")
+    self.canvas.Print(self.fname)
+    self.pageCounter += 1
+    pass
+
+
 class TurnOn(object):
   """docstring for TurnOn"""
   def __init__(self, Numerator, Denominator):
@@ -160,10 +217,11 @@ class TurnOn(object):
     self.nomClone  = None
     self.denomClone = None
     self.newBins = None
-  def setCanvas(self,canvas):
-    """docstring for setCanvas"""
-    canvas.cd()
-    pass
+    self.text90 = None
+    self.text95 = None
+    self.text99 = None
+
+
   def setRange(self,x1,x2):
     """docstring for SetRange"""
     self.xmin = x1
@@ -173,11 +231,12 @@ class TurnOn(object):
   def DifferentialTurnOn(self):
     """docstring for DifferentialTurnOn"""
     self.TGraph.Divide(self.nom.hObj,self.denom.hObj)
-    self.TGraph.GetXaxis().SetTitle(self.nom.hObj.GetTitle())
+    self.TGraph.GetXaxis().SetTitle(self.nom.hObj.GetXaxis().GetTitle())
+    self.TGraph.GetXaxis().SetTitleSize(0.05)
     self.TGraph.GetYaxis().SetTitle("Efficiency")
     self.TGraph.GetXaxis().SetRangeUser(self.xmin,self.xmax)
     self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
-    self.TGraph.SetTitle("Differential turn on for %s"%(self.nom.directories))
+    self.TGraph.SetTitle("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
     return self.TGraph
 
   def CumulativeTurnOn(self,Bins):
@@ -192,12 +251,34 @@ class TurnOn(object):
     yval = r.Double(0)
     xval = r.Double(0)
     self.TGraph.GetPoint(1,xval,yval)
-    self.TGraph.SetTitle("Cumulative turn on for %s, with a cut of %f, Efficiency is %f + %f - %f"%(self.nom.directories,Bins[1],yval,self.TGraph.GetErrorYhigh(1),self.TGraph.GetErrorYlow(1)))
+    self.TGraph.SetTitle("Cumulative turn on for above plot, with a cut of %f, Efficiency is %f + %f - %f"%(Bins[1],yval,self.TGraph.GetErrorYhigh(1),self.TGraph.GetErrorYlow(1)))
     self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
     return self.TGraph
 
-
-
+  def logEffs(self):
+    """docstring for logEffs"""
+    yval = r.Double(0)
+    xval = r.Double(0)
+    self.text90 = r.TLatex(0.01,0.75,"")
+    self.text95 = r.TLatex(0.01,0.80,"")
+    self.text99 =  r.TLatex(0.01,0.80,"")
+    maxBinEdge = self.nom.hObj.GetBinLowEdge(self.nom.hObj.GetNbinsX())
+    for bin in range(1,self.nom.hObj.GetNbinsX()):
+      TGraph = r.TGraphAsymmErrors()
+      newBinEdge = self.nom.hObj.GetBinWidth(bin) * bin
+      nomClone = self.nom.hObj.Rebin(2,"nomClone",array.array('d',[0.,newBinEdge,maxBinEdge]))
+      denomClone = self.denom.hObj.Rebin(2,"denomClone",array.array('d',[0.,newBinEdge,maxBinEdge]))
+      TGraph.Divide(nomClone,denomClone)
+      TGraph.GetPoint(1,xval,yval)
+      # print "approx %f efficient at a cut of %f"%(yval,newBinEdge)
+      if yval > 0.90 and yval < 0.95: self.text90 = r.TLatex(0.01,0.75,"%s is approx 90%% efficient at a cut of %f"%(self.nom.hist.split("_")[0],newBinEdge))
+      if yval > 0.95:
+        self.text95 = r.TLatex(0.01,0.80,"%s is approx 95%% efficient at a cut of %f"%(self.nom.hist.split("_")[0],newBinEdge))
+        if yval > 0.99:
+          self.text99 = r.TLatex(0.01,0.85,"%s is >= 99%% efficient  at a cut of %f"%(self.nom.hist.split("_")[0],newBinEdge))
+          break
+    return [self.text90,self.text95,self.text99]
+    pass
 
 class TurnOnPrefs(object):
   """docstring for TurnOnPrefs"""
@@ -209,13 +290,6 @@ class TurnOnPrefs(object):
     self.AxisRange = AxisRanges
     self.cutList = CumCut
 
-
-
-
-
-
-
-
 def AddHistos(List):
   """docstring for AddHistos"""
   hist = None
@@ -226,29 +300,6 @@ def AddHistos(List):
       hist.Add(H.hOjb)
   return hist
   pass
-
-
-
-def GetHist(DataSetName = None,folder = None,hist = None ,col = r.kBlack,norm = None,Legend = None):
-    a = r.TFile.Open(DataSetName) #open the file
-    # closeList.append(a) # append the file to the close list
-    if folder is none:
-      Hist = a.Get(hist)
-    if folder is not None:
-      b = a.Get(folder) #open the directory in the root file
-      Hist = b.Get(hist) # get your histogram by name
-    if Hist == None : Hist = r.TH1D()
-    if Legend != 0:
-      leg.AddEntry(Hist,Legend,"LP") # add a legend entry
-    Hist.SetLineWidth(3)
-    Hist.SetLineColor(col) #set colour
-    # Set the last bin to conain the over flow and sort hObj the errors
-    Hist.SetBinContent(Hist.GetNbinsX() ,Hist.GetBinContent(Hist.GetNbinsX())+Hist.GetBinContent(Hist.GetNbinsX()+1))
-    Hist.SetBinError(Hist.GetNbinsX() ,math.sqrt((Hist.GetBinError(Hist.GetNbinsX()))**2 + (Hist.GetBinError(Hist.GetNbinsX()+1))**2))
-    Hist.SetBinContent(Hist.GetNbinsX()+1,0)
-    if norm != 0:
-       Hist.Scale(1.) #if not data normilse to the data by lumi, MC is by default weighted to 100pb-1, if you have changed this change here!
-    return Hist
 
 def Legend():
   """docstring for Legend"""
@@ -271,8 +322,7 @@ prelim = r.TLatex(0.15,0.92,"#scale[0.8]{CMS}")
 prelim.SetNDC()
 lumi = r.TLatex(0.45,.82,"#scale[0.8]{#int L dt = 35 pb^{-1}, #sqrt{s} = 7 TeV}")
 lumi.SetNDC()
-c1 = r.TCanvas("canvas","canname",1200,1400)
-
+c1 = r.TCanvas()
 
 def errorFun(x, par):
   return 0.5*par[0]*(1. + r.TMath.Erf( (x[0] - par[1]) / (math.sqrt(2.)*par[2]) ))
@@ -301,74 +351,3 @@ def reBiner(Hist,minimum):
   nBins+=1
   rebinList = array.array('d',upArray)
   return (nBins,rebinList)
-
-
-# First Make Turn on curves
-def MakeTurnOn(CorrHist = None, UnCorrHist = None , BitList = [] ,CorThresholds = [], UnCorThresholds = []):
-  hObj = []
-  for Trig,Cor,UnCor,Ref in zip(BitList,CorThresholds,UnCorThresholds,RefList):
-    Nom = GetHist(CorrHist,"/",Trig,0,0,"PromprReco-v4 Threshold = %f"%(Cor))
-    DeNom = GetHist(CorrHist,"/",Ref,0,0,0)
-    (i,bins)= reBiner(Nom,10.)
-    a = Nom.Rebin(i,"a",bins)
-    b = DeNom.Rebin(i,"b",bins)
-    mg = r.TMultiGraph()
-    TurnOn = r.TGraphAsymmErrors()
-    TurnOn.Divide(a,b)
-    TurnOn.SetMarkerColor(4)
-    TurnOn.SetMarkerStyle(20)
-    mg.Add(TurnOn)
-    low = 0. if (Cor - 25.) < 0. else Cor - 25.
-    high = 1000.
-    fermiFunction = r.TF1("fermiFunction",errorFun,low,high,3)
-    fermiFunction.SetParameters(1.00,Cor+10.,1.)
-    fermiFunction.SetParNames("#epsilon","#mu","#sigma")
-    TurnOn.Fit(fermiFunction,"%f"%(Cor),"%f"%(Cor),low,high)
-    TurnOn.SetMarkerSize(2)
-    fermiFunction.SetLineColor(5)
-    hObj.append(TurnOn)
-    if UnCorrHist != None:
-      Nom = GetHist(UnCorrHist,"/",Trig,0,0,"PF Corrections, Threshold = %d"%(UnCor))
-      DeNom = GetHist(UnCorrHist,"/","RefJet",0,0,0)
-      TurnOn2 = r.TGraphAsymmErrors()
-      (i,bins)= reBiner(Nom,10.)
-      c = Nom.Rebin(i,"c",bins)
-      d = DeNom.Rebin(i,"d",bins)
-      TurnOn2.Divide(c,d)
-      # TurnOn.Draw("ap same")
-      mg.Add(TurnOn2)
-      TurnOn2.SetMarkerColor(6)
-      TurnOn2.SetMarkerStyle(22)
-      TurnOn2.SetMarkerSize(2)
-      # TurnOn2.GetXaxis().SetRangeUser(0.,100.)
-      fermiFunction2 = r.TF1("fermiFunction2",errorFun,0.,1000.,3)
-      fermiFunction2.SetParameters(1.00,UnCor,1.)
-      fermiFunction2.SetParNames("#epsilon","#mu","#sigma")
-      # TurnOn2.Fit(fermiFunction2,"%f"%(Cor),"%i"%(int(Cor)),low,high)
-      # fermiFunction2.SetLineColor(6)
-      # fermiFunction2.Draw("same")
-    leg.Clear()
-    leg.AddEntry(TurnOn,"PF Corrections, Threshold = %d"%(Cor), "LP")
-    if UnCorrHist !=None: leg.AddEntry(TurnOn2,"Piecewise cubic Corrections, Threshold = %d"%(Cor), "LP")
-    mg.Draw("ap")
-    mg.GetXaxis().SetTitle("P_{T}^{RECO, Corr}")
-    mg.GetYaxis().SetTitle("Efficiency")
-    mg.GetXaxis().SetTitleSize(0.04)
-    mg.GetXaxis().SetTitleOffset(1.17)
-    # mg.GetXaxis().SetLabelOffset(1.0)
-    mg.GetYaxis().SetTitleOffset(1.15)
-    mg.GetYaxis().SetTitleSize(0.04)
-    r.gPad.Update()
-    fermiFunction.SetLineColor(4)
-    fermiFunction.Draw("same")
-    # if UnCorrHist !=None: fermiFunction2.Draw("SAME")
-    mg.GetXaxis().SetRangeUser(0.,150.)
-    if int(Cor) is 128:
-      mg.GetXaxis().SetRangeUser(50.,250.)
-    mg.GetYaxis().SetRangeUser(0.,1.5)
-    leg.Draw("same")
-    ensure_dir(CorrHist[0:-5])
-    c1.SaveAs(CorrHist[0:-5]+"/TurnOnFor_%d_Jet60_PF.pdf"%(Cor))
-    #c1.Clear()
-    leg.Clear()
-  return hObj
