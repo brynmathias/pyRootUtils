@@ -58,10 +58,7 @@ r.gStyle.SetLabelFont(42, "XYZ");
 r.gStyle.SetLabelOffset(0.01, "XYZ");
 r.gStyle.SetLabelSize(0.05, "XYZ");
 r.gStyle.SetHatchesLineWidth(2)
-# from PlottingFunctions import *
-# r.gROOT.SetBatch(True) # suppress the creation of canvases on the screen.. much much faster if over a remote connection
-# r.gROOT.SetStyle("Plain") #To set plain bkgds for slides
-# r.gROOT.ProcessLine(".L ./Jets30/tdrstyle.C+")
+
 r.gStyle.SetPalette(1)
 
 def SetBatch():
@@ -81,6 +78,7 @@ class GetSumHist(object):
     self.isData = False
     self.hObj = None
     self.returnHist()
+    self.cumulativeHist = None
   """docstring for GetSumHist"""
   def returnHist(self):
     """docstring for returnHist"""
@@ -128,11 +126,28 @@ class GetSumHist(object):
     return self.hObj.Integral(bin1,bin2)
     pass
 
+
+  def CumulativeHist(self):
+    """docstring for cumulativeHist"""
+    self.cumulativeHist = self.hObj.Clone()
+    maxbin = self.hObj.GetNbinsX()
+    for bin in range(0,maxbin):
+      err = r.Double(0)
+      val = self.hObj.IntegralAndError(bin, maxbin, err)
+      self.cumulativeHist.SetBinContent(bin,val)
+      self.cumulativeHist.SetBinError(bin,err)
+    return self.cumulativeHist
+    pass
+
   def Rebin(self,nbins,binList):
     """docstring for Rebin"""
-    bins = array.array('d',binList)
-    tmp = self.hObj.Rebin(nbins,"tmp",bins)
-    self.hObj = tmp
+    if binList != None:
+      bins = array.array('d',binList)
+      tmp = self.hObj.Rebin(nbins,"tmp",bins)
+      self.hObj = tmp
+    else:
+      self.hObj.Rebin(nbins)
+
 
   def Help(self):
     print "====================================================================================================================="
@@ -145,19 +160,32 @@ class GetSumHist(object):
 
 
 
-class printPDF(object):
+class Print(object):
   """docstring for printPDF"""
   def __init__(self, Fname):
-    super(printPDF, self).__init__()
+    super(Print, self).__init__()
     self.canvas = r.TCanvas()
+
     self.fname = Fname
+    self.rfile = r.TFile(self.fname[:-4]+".root",'RECREATE')
     self.pageCounter = 1
 
+
+
+  def toFile(self,ob,title):
+    """docstring for toFile"""
+    self.rfile.cd()
+    ob.SetName(title)
+    ob.SetTitle(title)
+    ob.Write()
+    ob = None
+    pass
 
   def cd(self):
     """docstring for cd"""
     self.canvas.cd()
     pass
+
 
   def open(self):
     """docstring for open"""
@@ -167,6 +195,8 @@ class printPDF(object):
 
   def close(self):
     """docstring for close"""
+    self.rfile.Write()
+    self.rfile.Close()
     self.canvas.Print(self.fname+"]")
     pass
 
@@ -178,12 +208,12 @@ class printPDF(object):
 
   def SetLog(self,axis,BOOL):
     """docstring for SetLog"""
-    if axis == 'x':
+    if 'x' in axis:
       if BOOL:
         self.canvas.SetLogx()
       else:
         self.canvas.SetLogx(r.kFALSE)
-    if axis == 'y':
+    if 'y' in axis:
       if BOOL:
         self.canvas.SetLogy()
       else:
@@ -196,6 +226,8 @@ class printPDF(object):
     num = r.TLatex(0.95,0.01,"%d"%(self.pageCounter))
     num.SetNDC()
     num.Draw("same")
+    self.canvas.SetGridx()
+    self.canvas.SetGridy()
     self.canvas.Print(self.fname)
     self.pageCounter += 1
     pass
@@ -209,6 +241,7 @@ class TurnOn(object):
     self.Title = None
     self.xaxisTitle = None
     self.yaxisTitle = None
+    self.leg = Legend()
     self.TGraph = r.TGraphAsymmErrors()
     self.xmin = None
     self.ymin = -0.2
@@ -220,8 +253,17 @@ class TurnOn(object):
     self.text90 = None
     self.text95 = None
     self.text99 = None
-
-
+    self.mg = r.TMultiGraph()
+    self.tgraphlist = []
+    self.nomClones = []
+    self.denomClones = []
+    self.finalGraph = None
+    self.x = []
+    self.y = []
+    self.errxup = []
+    self.errxlow = []
+    self.erryup = []
+    self.errylow = []
   def setRange(self,x1,x2):
     """docstring for SetRange"""
     self.xmin = x1
@@ -237,7 +279,121 @@ class TurnOn(object):
     self.TGraph.GetXaxis().SetRangeUser(self.xmin,self.xmax)
     self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
     self.TGraph.SetTitle("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
+    self.TGraph.SetName("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
     return self.TGraph
+
+
+  def RobPlot(self):
+    def binomialErr(nom,denom):
+      p = 0.5
+      q = 1 - p
+      nk = math.factorial(denom)/(math.factorial(nom) * math.factorial( denom - nom))
+      print pow(p,nom) , pow(q,(denom - nom)), nk
+      if pow(p,nom) == 0 or pow(q,(denom - nom)) == 0.: return 0
+      pHat = nk * pow(p,nom) * (pow(q,(denom - nom)))
+      return 1.96*math.sqrt((pHat*(1-pHat))/denom)
+      pass
+    """docstring for RobPlot"""
+    self.tgraphlist = []
+    binWidth = self.nom.hObj.GetBinWidth(1)
+    maxi = self.nom.hObj.GetBinWidth(1) *self.nom.hObj.GetNbinsX()
+    maxbin = self.nom.hObj.GetNbinsX()
+    for bin in range(1,self.nom.hObj.GetNbinsX()):
+      if bin * binWidth > maxi: continue
+      nomErr = r.Double(0)
+      denomErr = r.Double(0)
+      binNom =  self.nom.hObj.IntegralAndError(bin, maxbin, nomErr)
+      binDenom =  self.denom.hObj.IntegralAndError(bin, maxbin, denomErr)
+      if binDenom != 0:
+        print "Bin Center = %f , Efficiency = %f"%(self.nom.hObj.GetBinCenter(bin),binNom/binDenom)
+        self.x.append(self.nom.hObj.GetBinCenter(bin))
+        self.y.append(binNom/binDenom)
+        self.errxup.append((binWidth/2.))
+        self.errxlow.append(-(binWidth/2.))
+        self.erryup.append(0)
+        self.errylow.append(binomialErr(binNom,binDenom))
+    self.finalGraph =   r.TGraphAsymmErrors(len(self.x)-1, array.array('d',self.x), array.array('d',self.y), array.array('d',self.errxlow), array.array('d',self.errxup), array.array('d',self.errylow), array.array('d',self.erryup))
+    self.finalGraph.SetMarkerStyle(20)
+    self.finalGraph.SetMarkerSize(0.5)
+    self.finalGraph.SetTitle("%s (pre = %s) from  %s (pre = %s) "%((self.nom.hist.split("_")[2]),(self.nom.hist.split("_")[4]),(self.nom.hist.split("_")[6]),(self.nom.hist.split("_")[-1])))
+    return self.finalGraph
+    #
+    #
+    # for bin in range(1,self.nom.hObj.GetNbinsX()):
+    #   if bin * binWidth > maxi: continue
+    #   # print "Bin = %f"%(bin)
+    #   yval = r.Double(0)
+    #   xval = r.Double(0)
+    #   self.nomClones.append(self.nom.hObj.Clone())
+    #   self.denomClones.append(self.denom.hObj.Clone())
+    #   self.newBins = array.array('d',[0.,(bin * binWidth), maxi])
+    #   # print self.newBins
+    #   self.nomClones[bin-1].Rebin(  len(self.newBins)-1,"a"+str(bin), self.newBins)
+    #   self.denomClones[bin-1].Rebin(len(self.newBins)-1,"b"+str(bin), self.newBins)
+    #   a = r.TGraphAsymmErrors()
+    #   self.tgraphlist.append(a)
+    #   self.tgraphlist[bin-1].Divide(self.nomClones[bin-1].Rebin(  len(self.newBins)-1,"a"+str(bin), self.newBins),self.denomClones[bin-1].Rebin(len(self.newBins)-1,"b"+str(bin), self.newBins))
+    #   self.tgraphlist[bin-1].GetPoint(1,xval,yval)
+    #
+    #   self.y.append(yval)
+    #   self.x.append(self.nom.hObj.GetBinCenter(bin))
+    #   self.errxlow.append(-5.)#self.nom.hObj.GetBinCenter(bin)-(binWidth/2.))
+    #   self.errxup.append(5.)#self.nom.hObj.GetBinCenter(bin)+(binWidth/2.))
+    #   self.erryup.append(self.tgraphlist[bin-1].GetErrorYhigh(1) if self.tgraphlist[bin-1].GetErrorYhigh(1) < 1.0 and self.tgraphlist[bin-1].GetErrorYhigh(1) > -1.0 else 0.)
+    #   self.errylow.append(self.tgraphlist[bin-1].GetErrorYlow(1) if self.tgraphlist[bin-1].GetErrorYlow(1) < 1.0 and  self.tgraphlist[bin-1].GetErrorYlow(1) > -1.0 else 0.)
+    #   # print self.y
+    # # print len(self.x),len(self.y),len(self.erryup),len(self.errylow)
+    # # for xv,xm,xp,yv,yp,ym in zip(self.x,self.errxlow,self.errxup,self.y,self.erryup,self.errylow):
+    # #   # print"AAAAAA"
+    # #   print "x = %f - %f + %f, y = %f + %f - %f"%(xv,xm,xp,yv,yp,ym)
+    # self.finalGraph =   r.TGraphAsymmErrors(len(self.x)-1, array.array('d',self.x), array.array('d',self.y), array.array('d',self.errxlow), array.array('d',self.errxup), array.array('d',self.errylow), array.array('d',self.erryup))
+    # self.finalGraph.GetXaxis().SetRangeUser(0.,3000.)
+    # self.finalGraph.SetTitle("%s (pre = %s) from  %s (pre = %s) "%((self.nom.hist.split("_")[2]),(self.nom.hist.split("_")[4]),(self.nom.hist.split("_")[6]),(self.nom.hist.split("_")[-1])))
+    #
+    # return self.finalGraph
+    # pass
+
+
+
+
+  def CumuMultiGraph(self):
+    """docstring for CumuMultiGraph"""
+    triggerExpected = float((self.nom.directories[0].split("_")[1])[2:])
+    print triggerExpected
+    binWidth = self.nom.hObj.GetBinWidth(1)
+    self.tgraphlist = []
+    maxi = self.nom.hObj.GetNbinsX() * binWidth
+    for bin in range(0,50):
+      self.nomClones.append(self.nom.hObj.Clone())
+      self.denomClones.append(self.denom.hObj.Clone())
+
+      print self.newBins
+
+      a = r.TGraphAsymmErrors()
+      self.tgraphlist.append(a)
+      self.tgraphlist[bin].SetName("i")
+      self.tgraphlist[bin].Divide(self.nomClones[bin].Rebin(  len(self.newBins)-1,"a"+str(bin), self.newBins),self.denomClones[bin].Rebin(len(self.newBins)-1,"b"+str(bin), self.newBins))
+      # a.GetXaxis().SetRangeUser()
+      self.tgraphlist[bin].SetLineColor(bin+1)
+      self.tgraphlist[bin].SetMarkerColor(bin+1)
+      # self.tgraphlist.append(a)
+      xval = r.Double(0)
+      yval = r.Double(0)
+      self.tgraphlist[bin].GetPoint(1,xval,yval)
+      self.tgraphlist[bin].SetTitle("%f"%(triggerExpected + (bin * binWidth)))
+      self.tgraphlist[bin].SetTitle("%f , %f"%(triggerExpected + (bin * binWidth),yval))
+      print "yval = %f, bin = %d, bin lowEdge = %d"%(yval,bin,triggerExpected + (bin * binWidth))
+      self.leg.AddEntry(self.tgraphlist[bin],"Eff = %f, Cut = %f"%(yval,triggerExpected + (bin * binWidth)),"l")
+      print self.nom.hist
+      if yval == 1.0:
+        self.mg.SetTitle("%s (pre = %s) from  %s (pre = %s) "%((self.nom.hist.split("_")[2]),(self.nom.hist.split("_")[4]),(self.nom.hist.split("_")[6]),(self.nom.hist.split("_")[-1])))
+        break
+
+    for graph in self.tgraphlist:
+      self.mg.Add(graph)
+    return (self.mg , self.leg)
+    pass
+
 
   def CumulativeTurnOn(self,Bins):
     """docstring for CumulativeTurnOn"""
@@ -253,6 +409,8 @@ class TurnOn(object):
     self.TGraph.GetPoint(1,xval,yval)
     self.TGraph.SetTitle("Cumulative turn on for above plot, with a cut of %f, Efficiency is %f + %f - %f"%(Bins[1],yval,self.TGraph.GetErrorYhigh(1),self.TGraph.GetErrorYlow(1)))
     self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
+    self.TGraph.GetXaxis().SetTitle(self.nom.hObj.GetXaxis().GetTitle())
+    self.TGraph.GetXaxis().SetTitleSize(0.05)
     return self.TGraph
 
   def logEffs(self):
@@ -263,9 +421,9 @@ class TurnOn(object):
     self.text95 = r.TLatex(0.01,0.80,"")
     self.text99 =  r.TLatex(0.01,0.80,"")
     maxBinEdge = self.nom.hObj.GetBinLowEdge(self.nom.hObj.GetNbinsX())
-    for bin in range(1,self.nom.hObj.GetNbinsX()):
+    for bin in range(1,self.nom.hObj.GetNbinsX()-1):
       TGraph = r.TGraphAsymmErrors()
-      newBinEdge = self.nom.hObj.GetBinWidth(bin) * bin
+      newBinEdge = self.nom.hObj.GetBinWidth(1) * bin
       nomClone = self.nom.hObj.Rebin(2,"nomClone",array.array('d',[0.,newBinEdge,maxBinEdge]))
       denomClone = self.denom.hObj.Rebin(2,"denomClone",array.array('d',[0.,newBinEdge,maxBinEdge]))
       TGraph.Divide(nomClone,denomClone)
@@ -303,15 +461,15 @@ def AddHistos(List):
 
 def Legend():
   """docstring for Legend"""
-  leg = r.TLegend(0.5, 0.6, 0.8, 0.8)
+  leg = r.TLegend(0.5, 0.4, 0.8, 0.6)
   leg.SetShadowColor(0)
   leg.SetBorderSize(0)
-  leg.SetFillStyle(4100)
-  leg.SetFillColor(0)
+  # leg.SetFillStyle(4100)
+  # leg.SetFillColor(0)
   leg.SetLineColor(0)
   leg.SetShadowColor(0)
   leg.SetBorderSize(0)
-  leg.SetFillStyle(4100)
+  # leg.SetFillStyle(4100)
   leg.SetFillColor(0)
   leg.SetLineColor(0)
   return leg
