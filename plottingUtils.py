@@ -69,6 +69,7 @@ class GetSumHist(object):
   def __init__(self, File = None, Directories = None, Hist = None, Col = r.kBlack, Norm = None, LegendText = None):
     super(GetSumHist, self).__init__()
     object.__init__(self)
+
     self.files = File
     self.directories = Directories
     self.hist = Hist
@@ -79,27 +80,58 @@ class GetSumHist(object):
     self.hObj = None
     self.returnHist()
     self.cumulativeHist = None
+    self.checkErrors = False
+
+
+    if self.checkErrors:
+      self.CheckErrors()
   """docstring for GetSumHist"""
   def returnHist(self):
     """docstring for returnHist"""
+    eh = [1.15, 1.36, 1.53, 1.73, 1.98, 2.21, 2.42, 2.61, 2.80, 3.00 ]
+    el = [0.00, 1.00, 2.00, 2.14, 2.30, 2.49, 2.68, 2.86, 3.03, 3.19 ]
     if self.files is None: return self.hObj
     for f in self.files:
       a = r.TFile.Open(f)
       # Get The first hist in the list and clone it.
-      for Dir in self.directories:
-        hf = a.Get(Dir)
-        if not hf: print "Subdirectory %s does not exist"%(Dir)
-        h = hf.Get(self.hist)
-        if self.hObj is None:
-          self.hObj = h.Clone()
-        else: self.hObj.Add(h)
-        # Set Colours
+      if self.norm is None or len(self.norm) is 1:
+        for Dir in self.directories:
+          hf = a.Get(Dir)
+          if not hf: print "Subdirectory %s does not exist"%(Dir)
+          h = hf.Get(self.hist)
+          if self.hObj is None:
+            self.hObj = h.Clone()
+          else: self.hObj.Add(h)
+      if self.norm != None and len(self.norm) != 1:
+        for Dir,weight in zip(self.directories,self.norm):
+          weight = int(1./weight)
+          hf = a.Get(Dir)
+          if not hf: print "Subdirectory %s does not exist"%(Dir)
+          h = hf.Get(self.hist)
+          if self.hObj is None:
+            self.hObj = h.Clone()
+            self.hObj.Scale(weight)
+          else:
+            self.hObj.Add(h,weight)
     self.hObj.SetLineColor(self.col)
     self.hObj.SetMarkerColor(self.col)
     # Set the last bin to show how many events in the over flow as well
-    if self.norm is not None:
-      self.hObj.Scale(self.norm/100.)
+    if self.norm is not None and len(self.norm) is 1:
+      self.hObj.Scale(self.norm[0])
     return self.hObj
+
+
+  def CheckErrors(self):
+    """docstring for CheckErrors"""
+    eh =  [1.15, 1.36, 1.53, 1.73, 1.98, 2.21, 2.42, 2.61, 2.80, 3.00 ]
+    el =  [0.00, 1.00, 2.00, 2.14, 2.30, 2.49, 2.68, 2.86, 3.03, 3.19 ]
+    for bin in range(self.hObj.GetNbinsX()):
+        if self.hObj.GetBinContent(bin) < 10.:
+          n = int(self.hObj.GetBinContent(bin))
+          # print "BinContent is %f, New Error is %f, DataSet is %s, Bin LowEdge is: %f"%(n,eh[n]*newWeight,DataSetName,Hist.GetBinLowEdge(bin))
+          self.hObj.SetBinError(bin,eh[n])
+    pass
+
 
   def HideOverFlow(self):
     """docstring for HideOverFlow"""
@@ -133,11 +165,11 @@ class GetSumHist(object):
     maxbin = self.hObj.GetNbinsX()
     for bin in range(0,maxbin):
       err = r.Double(0)
-      val = self.hObj.IntegralAndError(bin, maxbin, err)
+      val = self.hObj.IntegralAndError(bin, maxbin+1, err)
       self.cumulativeHist.SetBinContent(bin,val)
       self.cumulativeHist.SetBinError(bin,err)
     return self.cumulativeHist
-    pass
+
 
   def Rebin(self,nbins,binList):
     """docstring for Rebin"""
@@ -264,6 +296,10 @@ class TurnOn(object):
     self.errxlow = []
     self.erryup = []
     self.errylow = []
+    self.Hist = r.TH1D()#Numerator.hObj.Clone()
+    # self.DivHist = Denominator.hObj.Clone()
+    self.UseTgraph = True
+
   def setRange(self,x1,x2):
     """docstring for SetRange"""
     self.xmin = x1
@@ -271,17 +307,32 @@ class TurnOn(object):
     pass
 
   def DifferentialTurnOn(self):
-    """docstring for DifferentialTurnOn"""
-    self.TGraph.Divide(self.nom.hObj,self.denom.hObj)
-    self.TGraph.GetXaxis().SetTitle(self.nom.hObj.GetXaxis().GetTitle())
-    self.TGraph.GetXaxis().SetTitleSize(0.05)
-    self.TGraph.GetYaxis().SetTitle("Efficiency")
-    self.TGraph.GetXaxis().SetRangeUser(self.xmin,self.xmax)
-    self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
-    self.TGraph.SetTitle("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
-    self.TGraph.SetName("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
-    return self.TGraph
-
+    if self.UseTgraph == True:
+      """docstring for DifferentialTurnOn"""
+      self.TGraph.Divide(self.nom.hObj,self.denom.hObj)
+      self.TGraph.GetXaxis().SetTitle(self.nom.hObj.GetXaxis().GetTitle())
+      self.TGraph.GetXaxis().SetTitleSize(0.05)
+      self.TGraph.GetYaxis().SetTitle("Efficiency")
+      self.TGraph.GetXaxis().SetRangeUser(self.xmin,self.xmax)
+      self.TGraph.GetYaxis().SetRangeUser(self.ymin,self.ymax)
+      self.TGraph.SetTitle("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
+      self.TGraph.SetName("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
+      return self.TGraph
+    if self.UseTgraph == False:
+      # self.Hist = self.nom.hObj.Clone()
+      # self.Hist.Scale(self.nom.norm[0])
+      self.Hist.Divide(self.nom.hObj,self.denom.hObj,self.nom.norm[0], 1.0,"")
+      self.Hist.GetXaxis().SetTitleSize(0.05)
+      self.Hist.GetYaxis().SetTitle("Efficiency")
+      # self.Hist.GetXaxis().SetRangeUser(self.xmin,self.xmax)
+      # self.Hist.GetYaxis().SetRangeUser(self.ymin,self.ymax)
+      self.Hist.SetTitle("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
+      self.Hist.SetName("Differential turn on for %s, from file: %s"%(self.nom.directories,self.nom.files))
+      return self.Hist
+  def setGraph(self,sethist_):
+    """docstring for setType"""
+    self.UseTgraph = sethist_
+    pass
 
   def RobPlot(self):
     def binomialErr(nom,denom):
@@ -317,41 +368,7 @@ class TurnOn(object):
     self.finalGraph.SetMarkerSize(0.5)
     self.finalGraph.SetTitle("%s (pre = %s) from  %s (pre = %s) "%((self.nom.hist.split("_")[2]),(self.nom.hist.split("_")[4]),(self.nom.hist.split("_")[6]),(self.nom.hist.split("_")[-1])))
     return self.finalGraph
-    #
-    #
-    # for bin in range(1,self.nom.hObj.GetNbinsX()):
-    #   if bin * binWidth > maxi: continue
-    #   # print "Bin = %f"%(bin)
-    #   yval = r.Double(0)
-    #   xval = r.Double(0)
-    #   self.nomClones.append(self.nom.hObj.Clone())
-    #   self.denomClones.append(self.denom.hObj.Clone())
-    #   self.newBins = array.array('d',[0.,(bin * binWidth), maxi])
-    #   # print self.newBins
-    #   self.nomClones[bin-1].Rebin(  len(self.newBins)-1,"a"+str(bin), self.newBins)
-    #   self.denomClones[bin-1].Rebin(len(self.newBins)-1,"b"+str(bin), self.newBins)
-    #   a = r.TGraphAsymmErrors()
-    #   self.tgraphlist.append(a)
-    #   self.tgraphlist[bin-1].Divide(self.nomClones[bin-1].Rebin(  len(self.newBins)-1,"a"+str(bin), self.newBins),self.denomClones[bin-1].Rebin(len(self.newBins)-1,"b"+str(bin), self.newBins))
-    #   self.tgraphlist[bin-1].GetPoint(1,xval,yval)
-    #
-    #   self.y.append(yval)
-    #   self.x.append(self.nom.hObj.GetBinCenter(bin))
-    #   self.errxlow.append(-5.)#self.nom.hObj.GetBinCenter(bin)-(binWidth/2.))
-    #   self.errxup.append(5.)#self.nom.hObj.GetBinCenter(bin)+(binWidth/2.))
-    #   self.erryup.append(self.tgraphlist[bin-1].GetErrorYhigh(1) if self.tgraphlist[bin-1].GetErrorYhigh(1) < 1.0 and self.tgraphlist[bin-1].GetErrorYhigh(1) > -1.0 else 0.)
-    #   self.errylow.append(self.tgraphlist[bin-1].GetErrorYlow(1) if self.tgraphlist[bin-1].GetErrorYlow(1) < 1.0 and  self.tgraphlist[bin-1].GetErrorYlow(1) > -1.0 else 0.)
-    #   # print self.y
-    # # print len(self.x),len(self.y),len(self.erryup),len(self.errylow)
-    # # for xv,xm,xp,yv,yp,ym in zip(self.x,self.errxlow,self.errxup,self.y,self.erryup,self.errylow):
-    # #   # print"AAAAAA"
-    # #   print "x = %f - %f + %f, y = %f + %f - %f"%(xv,xm,xp,yv,yp,ym)
-    # self.finalGraph =   r.TGraphAsymmErrors(len(self.x)-1, array.array('d',self.x), array.array('d',self.y), array.array('d',self.errxlow), array.array('d',self.errxup), array.array('d',self.errylow), array.array('d',self.erryup))
-    # self.finalGraph.GetXaxis().SetRangeUser(0.,3000.)
-    # self.finalGraph.SetTitle("%s (pre = %s) from  %s (pre = %s) "%((self.nom.hist.split("_")[2]),(self.nom.hist.split("_")[4]),(self.nom.hist.split("_")[6]),(self.nom.hist.split("_")[-1])))
-    #
-    # return self.finalGraph
-    # pass
+
 
 
 
