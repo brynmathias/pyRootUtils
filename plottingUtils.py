@@ -7,7 +7,11 @@ Created by Bryn Mathias on 2011-09-30.
 """
 
 
-
+import sys
+import os
+import ROOT as r
+import math
+import array
 
 def MakeCumu(inHist):
     cumulativeHist = inHist.Clone()
@@ -90,11 +94,20 @@ class GetSumHist(object):
     if self.files is None: return self.hObj
     for f in self.files:
       a = r.TFile.Open(f)
+
       # Get The first hist in the list and clone it.
       if self.norm is None or len(self.norm) is 1:
         for Dir in self.directories:
+          if Dir is None:
+              self.hObj = a.Get(self.hist)
+              return self.hObj
+          try: a.Get(Dir)
+          except: "print SubDir does not exist" 
           hf = a.Get(Dir)
-          if not hf: print "Subdirectory %s does not exist"%(Dir)
+          if not hf: 
+              print "Subdirectory %s does not exist in %s"%(Dir,f)
+              self.hObj = r.TH1D()
+              return self.hObj
           h = hf.Get(self.hist)
           if self.hObj is None:
             self.hObj = h.Clone()
@@ -103,7 +116,10 @@ class GetSumHist(object):
         for Dir,weight in zip(self.directories,self.norm):
           weight = int(1./weight)
           hf = a.Get(Dir)
-          if not hf: print "Subdirectory %s does not exist"%(Dir)
+          if not hf: 
+              print "Subdirectory %s does not exist in %s"%(Dir,f)
+              self.hObj = r.TH1D()
+              return self.hObj
           h = hf.Get(self.hist)
           if self.hObj is None:
             self.hObj = h.Clone()
@@ -255,8 +271,8 @@ class Print(object):
     num = r.TLatex(0.95,0.01,"%d"%(self.pageCounter))
     num.SetNDC()
     num.Draw("same")
-    self.canvas.SetGridx()
-    self.canvas.SetGridy()
+    # self.canvas.SetGridx()
+    # self.canvas.SetGridy()
     self.canvas.Print(self.fname)
     self.pageCounter += 1
     pass
