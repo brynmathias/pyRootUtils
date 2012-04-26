@@ -75,16 +75,24 @@ class TurnOn(object):
         TurnOn.SetTitle(denominator.GetTitle())
         TurnOn.GetPoint(point,xvalAtPoint,efficiency)
         for p in range(TurnOn.GetN()):
+          xvalAtPoint = r.Double(0)            
           TurnOn.GetPoint(p,xvalAtPoint,efficiency)
-          if xvalAtPoint != xVal:
-             ErrorYhigh = 0.
-             ErrorYlow = 0.
-
+          # TurnOn.Print()
+          # if xvalAtPoint != xVal:
+          ErrorYhigh = 0.
+          ErrorYlow = 0.
+          # print "Eff", efficiency
+          # print  "YLow",TurnOn.GetErrorYlow(p)
+          # print  "Yhigh",TurnOn.GetErrorYhigh(p)
+          # print "Xval",xVal
+          # print "xvalAtPoint",xvalAtPoint
+          # print "p",p
+          # print "TurnOn.GetN()",TurnOn.GetN()
           if xvalAtPoint == xVal:
              ErrorYhigh = TurnOn.GetErrorYhigh(point)
              ErrorYlow = TurnOn.GetErrorYlow(point)
              break
-        print "Error ylow = %f, Error yHigh = %f, xVal = %f, xvalAtPoint = %f graphName = %s"%(ErrorYlow,ErrorYhigh, xVal,xvalAtPoint,TurnOn.GetTitle())
+        # print "Error ylow = %f, Error yHigh = %f, xVal = %f, xvalAtPoint = %f graphName = %s"%(ErrorYlow,ErrorYhigh, xVal,xvalAtPoint,TurnOn.GetTitle())
         if denominator.GetBinContent(bin) > 0.:
           if ErrorYhigh**2 > 0.:  w_i_plus = 1./(ErrorYhigh**2)
           else: w_i_plus = 0.

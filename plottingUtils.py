@@ -66,6 +66,20 @@ def SetBatch():
   """docstring for SetBatch"""
   return r.gROOT.SetBatch(True)
 
+
+# def MakeCumu(inHist):
+#     cumulativeHist = inHist.Clone()
+#     maxbin = inHist.GetNbinsX()
+#     for bin in range(0,maxbin):
+#       err = r.Double(0)
+#       val = inHist.IntegralAndError(bin, maxbin, err)
+#       cumulativeHist.SetBinContent(bin,val)
+#       cumulativeHist.SetBinError(bin,err)
+#     return cumulativeHist
+
+
+
+
 class GetSumHist(object):
   def __init__(self, File = None, Directories = None, Hist = None, Col = r.kBlack, Norm = None, LegendText = None):
     super(GetSumHist, self).__init__()
@@ -100,6 +114,7 @@ class GetSumHist(object):
         for Dir in self.directories:
           if Dir is None:
               self.hObj = a.Get(self.hist)
+              self.hObj.SetLineColor(self.col)
               return self.hObj
           try: a.Get(Dir)
           except: "print SubDir does not exist" 
@@ -210,7 +225,7 @@ class Print(object):
   def __init__(self, Fname):
     super(Print, self).__init__()
     self.canvas = r.TCanvas()
-
+    self.DoPageNum = True
     self.fname = Fname
     # self.rfile = r.TFile(self.fname[:-4]+".root",'RECREATE')
     self.pageCounter = 1
@@ -235,6 +250,11 @@ class Print(object):
   def open(self):
     """docstring for open"""
     self.canvas.Print(self.fname+"[")
+    # r.gPad.SetRightMargin(0.175)
+    # r.gPad.SetLeftMargin(0.1)
+    # r.gPad.SetTopMargin(0.05)
+    # r.gPad.SetBottomMargin(0.15)
+    
     pass
 
 
@@ -270,7 +290,7 @@ class Print(object):
     """docstring for Print"""
     num = r.TLatex(0.95,0.01,"%d"%(self.pageCounter))
     num.SetNDC()
-    num.Draw("same")
+    if self.DoPageNum: num.Draw("same")
     # self.canvas.SetGridx()
     # self.canvas.SetGridy()
     self.canvas.Print(self.fname)
@@ -301,9 +321,9 @@ def AddHistos(List):
   return hist
   pass
 
-def Legend():
+def Legend(x1 = None, y1 = None, x2 = None, y2 = None):
   """docstring for Legend"""
-  leg = r.TLegend(0.5, 0.4, 0.8, 0.6)
+  leg = r.TLegend(x1,y1,x2,y2)
   leg.SetShadowColor(0)
   leg.SetBorderSize(0)
   # leg.SetFillStyle(4100)
