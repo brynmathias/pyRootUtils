@@ -33,7 +33,9 @@ class TurnOn(object):
     for nom,denom in zip(self.numerator,self.denominator):
       if self.Approximate is not True:
         graph = r.TGraphAsymmErrors()
+        graph.SetTitle(nom.GetTitle())
         graph.Divide(nom,denom)
+        graph.GetYaxis().SetRangeUser(0.,1.1)
         self.listOfTurnOns.append(graph)
       if self.Approximate is True:
         a = nom.Clone()
@@ -41,6 +43,7 @@ class TurnOn(object):
           a.Scale(weights[i])
         a.Divde(denom)
         graph = r.TGraph(a)
+        graph.GetYaxis().SetRangeUser(0.,1.1)
         self.listOfTurnOns.append(graph)
       i+=1
     return self.listOfTurnOns
@@ -123,6 +126,7 @@ class TurnOn(object):
       # if AvEff-error_minus < 1.:
       #   error_minus = AvEff - 1
       self.finalPlot.SetPointError(point,self.finalPlot.GetErrorXlow(point),self.finalPlot.GetErrorXhigh(point),error_minus,error_plus )
+    self.finalPlot.GetYaxis().SetRangeUser(0.,1.1)
     return self.finalPlot
     pass
 

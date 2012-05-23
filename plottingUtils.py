@@ -250,10 +250,10 @@ class Print(object):
   def open(self):
     """docstring for open"""
     self.canvas.Print(self.fname+"[")
-    # r.gPad.SetRightMargin(0.175)
-    # r.gPad.SetLeftMargin(0.1)
-    # r.gPad.SetTopMargin(0.05)
-    # r.gPad.SetBottomMargin(0.15)
+    #r.gPad.SetRightMargin(0.175)
+    #r.gPad.SetLeftMargin(0.1)
+    #r.gPad.SetTopMargin(0.05)
+    #r.gPad.SetBottomMargin(0.35)
     
     pass
 
