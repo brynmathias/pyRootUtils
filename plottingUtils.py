@@ -144,7 +144,7 @@ class GetSumHist(object):
             self.hObj.Scale(weight)
           else:
             self.hObj.Add(h,weight)
-      self.hObj.SeDirectory(0)
+      self.hObj.SetDirectory(0)
       a.Close()
     self.hObj.SetLineColor(self.col)
     self.hObj.SetMarkerColor(self.col)
