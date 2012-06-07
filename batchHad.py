@@ -20,8 +20,8 @@ except ImportError:
   args.add_option("-o","--out",dest="out",action="store",default=None,type='string', help='outfile')
   (args,thing)=args.parse_args() 
 
-def hadd(out,infiles):
-    cmd=["hadd",out,infiles]
+def hadd(out,infiles ):
+    cmd=["hadd",out]+ infiles
     subprocess.call(cmd)
 
 
@@ -41,11 +41,7 @@ print noPasses
 for i in range(len(newfiles)):
   if len(newfiles) < i*noPasses: continue
   thisPass = newfiles[i*noPasses:noPasses*(1+i)]
-  print thisPass
-  string = ""
-  for thing in thisPass: string += (thing+" ")
-  hadd("%d_%s"%(i,args.out), "%s"%(string))
-  print "hadd %d_%s %s"%(i,args.out,string)
+  hadd("%d_%s"%(i,args.out), thisPass)
   
   
   
