@@ -15,9 +15,9 @@ try:
 except ImportError:
   from optparse import OptionParser
   args = OptionParser()
-  args.add_option("-d","--directory",action="store",type='string',default=None, help='Directory files are in')
-  args.add_option("-n","--nFiles" ,action="store",default=None,type='int', help='how many files to hadd at a time')
-  args.add_option("-o","--out",action="store",default=None,type='string', help='outfile')
+  args.add_option("-d","--directory",dest="directory",action="store",type='string',default=None, help='Directory files are in')
+  args.add_option("-n","--nFiles" ,dest="nFiles",action="store",default=None,type='int', help='how many files to hadd at a time')
+  args.add_option("-o","--out",dest="out",action="store",default=None,type='string', help='outfile')
    
 
 
