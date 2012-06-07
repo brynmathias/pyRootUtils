@@ -14,11 +14,14 @@ import math
 import array
 
 def MakeCumu(inHist):
+    eh =  [1.15, 1.36, 1.53, 1.73, 1.98, 2.21, 2.42, 2.61, 2.80, 3.00 ]
+    el =  [0.00, 1.00, 2.00, 2.14, 2.30, 2.49, 2.68, 2.86, 3.03, 3.19 ]
     cumulativeHist = inHist.Clone()
-    maxbin = inHist.GetNbinsX()
+    maxbin = inHist.GetNbinsX()+1
     for bin in range(0,maxbin):
       err = r.Double(0)
       val = inHist.IntegralAndError(bin, maxbin, err)
+      err = math.sqrt(val) if val > 9 else max(el[int(val)],eh[int(val)])
       cumulativeHist.SetBinContent(bin,val)
       cumulativeHist.SetBinError(bin,err)
     return cumulativeHist
