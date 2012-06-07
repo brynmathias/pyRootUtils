@@ -1,18 +1,24 @@
 #!/usr/bin/env python
 import sys,os
-import argparse
+
 import glob
 import subprocess
 
 
-    
-    
-parser = argparse.ArgumentParser(description = "Hadd files in a directory (in batches if wanted)")
-parser.add_argument("-directory",type=str,help="Directory files are in")
-parser.add_argument("-nFiles",type=int,help="how many files to hadd at a time",default = 0)
-parser.add_argument("-out",type=str,help="outfile",default = "out.root")
-args = parser.parse_args()
-print args.directory
+try:
+  import argparse    
+  parser = argparse.ArgumentParser(description = "Hadd files in a directory (in batches if wanted)")
+  parser.add_argument("--directory",type=str,help="Directory files are in")
+  parser.add_argument("--nFiles",type=int,help="how many files to hadd at a time",default = 0)
+  parser.add_argument("--out",type=str,help="outfile",default = "out.root")
+  args = parser.parse_args()
+except ImportError:
+  from optparse import OptionParser
+  args = OptionParser()
+  args.add_option("-d","--directory",action="store",type='string',default=None, help='Directory files are in')
+  args.add_option("-n","--nFiles" ,action="store",default=None,type='int', help='how many files to hadd at a time')
+  args.add_option("-o","--out",action="store",default=None,type='string', help='outfile')
+   
 
 
 def hadd(out,infiles):
