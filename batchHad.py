@@ -18,8 +18,7 @@ except ImportError:
   args.add_option("-d","--directory",dest="directory",action="store",type='string',default=None, help='Directory files are in')
   args.add_option("-n","--nFiles" ,dest="nFiles",action="store",default=None,type='int', help='how many files to hadd at a time')
   args.add_option("-o","--out",dest="out",action="store",default=None,type='string', help='outfile')
-   
-
+  args=args.parse_args() 
 
 def hadd(out,infiles):
     cmd=["hadd",out,infiles]
