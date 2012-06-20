@@ -234,7 +234,7 @@ class Print(object):
     self.fname = Fname
     # self.rfile = r.TFile(self.fname[:-4]+".root",'RECREATE')
     self.pageCounter = 1
-
+    self.open()
 
 
   def toFile(self,ob,title):
