@@ -20,6 +20,7 @@ def MakeCumu(inHist):
     maxbin = inHist.GetNbinsX()+1
     for bin in range(0,maxbin):
       err = r.Double(0)
+      # val = inHist.IntegralAndError(0, bin, err)
       val = inHist.IntegralAndError(bin, maxbin, err)
       err = math.sqrt(val) if val > 9 else max(el[int(val)],eh[int(val)])
       cumulativeHist.SetBinContent(bin,val)
@@ -255,10 +256,10 @@ class Print(object):
   def open(self):
     """docstring for open"""
     self.canvas.Print(self.fname+"[")
-    #r.gPad.SetRightMargin(0.175)
-    #r.gPad.SetLeftMargin(0.1)
-    #r.gPad.SetTopMargin(0.05)
-    #r.gPad.SetBottomMargin(0.35)
+    r.gPad.SetRightMargin(0.1)
+    r.gPad.SetLeftMargin(0.1)
+    r.gPad.SetTopMargin(0.05)
+    r.gPad.SetBottomMargin(0.15)
     
     pass
 
@@ -348,6 +349,23 @@ prelim.SetNDC()
 lumi = r.TLatex(0.45,.82,"#scale[0.8]{#int L dt = 35 pb^{-1}, #sqrt{s} = 7 TeV}")
 lumi.SetNDC()
 c1 = r.TCanvas()
+
+def threeToTwo(h3) :
+    name = h3.GetName()
+    h2 = r.TH2D(name+"_2D",h3.GetTitle(),
+                h3.GetNbinsX(), h3.GetXaxis().GetXmin(), h3.GetXaxis().GetXmax(),
+                h3.GetNbinsY(), h3.GetYaxis().GetXmin(), h3.GetYaxis().GetXmax(),
+                )
+
+    for iX in range(1, 1+h3.GetNbinsX()) :
+        for iY in range(1, 1+h3.GetNbinsY()) :
+            content = h3.GetBinContent(iX, iY, 1)
+            h2.SetBinContent(iX, iY, content)
+    h2.GetZaxis().SetTitle(h3.GetZaxis().GetTitle())
+    h2.SetDirectory(0)
+    return h2
+
+
 
 def errorFun(x, par):
   return 0.5*par[0]*(1. + r.TMath.Erf( (x[0] - par[1]) / (math.sqrt(2.)*par[2]) ))

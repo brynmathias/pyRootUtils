@@ -22,7 +22,7 @@ class TurnOn(object):
     self.listOfTurnOns = []
     self.Approximate = False
     self.finalPlot = None
-    self.Debug = False
+    self.Debug = True
     self.TotNumerator = None
     self.TotDenominator = None
     self.ListOfTurnOns()
@@ -97,11 +97,12 @@ class TurnOn(object):
              break
         # print "Error ylow = %f, Error yHigh = %f, xVal = %f, xvalAtPoint = %f graphName = %s"%(ErrorYlow,ErrorYhigh, xVal,xvalAtPoint,TurnOn.GetTitle())
         if denominator.GetBinContent(bin) > 0.:
+          if self.Debug: print ErrorYhigh, bin, denominator.GetBinLowEdge(bin), denominator.GetBinContent(bin)
           if ErrorYhigh**2 > 0.:  w_i_plus = 1./(ErrorYhigh**2)
-          else: w_i_plus = 0.
+          else: w_i_plus = 1.
           sum_w_i_plus += w_i_plus
           if ErrorYlow**2 > 0. :w_i_minus = 1./(ErrorYlow**2)
-          else: w_i_minus = 0.
+          else: w_i_minus = 1.
           sum_w_i_minus += w_i_minus
           w_i = max(w_i_minus,w_i_plus)
           sum_w_i += w_i
