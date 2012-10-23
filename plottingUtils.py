@@ -20,8 +20,8 @@ def MakeCumu(inHist):
     maxbin = inHist.GetNbinsX()+1
     for bin in range(0,maxbin):
       err = r.Double(0)
-      # val = inHist.IntegralAndError(0, bin, err)
-      val = inHist.IntegralAndError(bin, maxbin, err)
+      val = inHist.IntegralAndError(0, bin, err)
+      #val = inHist.IntegralAndError(bin, maxbin, err)
       err = math.sqrt(val) if val > 9 else max(el[int(val)],eh[int(val)])
       cumulativeHist.SetBinContent(bin,val)
       cumulativeHist.SetBinError(bin,err)
@@ -81,7 +81,21 @@ def SetBatch():
 #       cumulativeHist.SetBinError(bin,err)
 #     return cumulativeHist
 
-
+def threeToTwo(h3) :
+    name = h3.GetName()
+    binsz = h3.GetNbinsZ()
+    print binsz
+    h2 = r.TH2D(name+"_2D",h3.GetTitle(),
+                h3.GetNbinsX(), h3.GetXaxis().GetXmin(), h3.GetXaxis().GetXmax(),
+                h3.GetNbinsY(), h3.GetYaxis().GetXmin(), h3.GetYaxis().GetXmax(),
+                )
+                
+    for iX in range(1, 1+h3.GetNbinsX()) :
+        for iY in range(1, 1+h3.GetNbinsY()) :
+            content = h3.GetBinContent(iX, iY, 1) + h3.GetBinContent(iX, iY, 2)+ h3.GetBinContent(iX, iY, 0)
+            h2.SetBinContent(iX, iY, content)
+    h2.GetZaxis().SetTitle(h3.GetZaxis().GetTitle())
+    return h2
 
 
 class GetSumHist(object):
@@ -256,7 +270,7 @@ class Print(object):
   def open(self):
     """docstring for open"""
     self.canvas.Print(self.fname+"[")
-    r.gPad.SetRightMargin(0.1)
+    r.gPad.SetRightMargin(0.15)
     r.gPad.SetLeftMargin(0.1)
     r.gPad.SetTopMargin(0.05)
     r.gPad.SetBottomMargin(0.15)
