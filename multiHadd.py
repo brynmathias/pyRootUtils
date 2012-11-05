@@ -53,7 +53,7 @@ def main():
     listOfFiles = getList(path=args.inputFile)
     jList = chunks(listOfFiles,args.nThreads)
     for i,c in enumerate(jList):
-        Threads.append(threading.Thread(group = None, target = haddF,args=(tmpDir+args.inputFile[:-1]+"_part%i.root"%(i),c)))
+        Threads.append(threading.Thread(group = None, target = haddF,args=(tmpDir+args.inputFile+"_part%i.root"%(i),c)))
     for t in Threads:
         t.start()
     for t in Threads:
