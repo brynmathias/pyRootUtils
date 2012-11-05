@@ -21,7 +21,7 @@ def MakeCumu(inHist):
     for bin in range(0,maxbin):
       err = r.Double(0)
       val = inHist.IntegralAndError(0, bin, err)
-      #val = inHist.IntegralAndError(bin, maxbin, err)
+      # val = inHist.IntegralAndError(bin, maxbin, err)
       err = math.sqrt(val) if val > 9 else max(el[int(val)],eh[int(val)])
       cumulativeHist.SetBinContent(bin,val)
       cumulativeHist.SetBinError(bin,err)
@@ -141,10 +141,11 @@ class GetSumHist(object):
               print "Subdirectory %s does not exist in %s"%(Dir,f)
               self.hObj = r.TH1D()
               return self.hObj
-          h = hf.Get(self.hist)
-          if self.hObj is None:
-            self.hObj = h.Clone()
-          else: self.hObj.Add(h)
+          for histName in self.hist:
+              h = hf.Get(histName)
+              if self.hObj is None:
+                self.hObj = h.Clone()
+              else: self.hObj.Add(h)
       if self.norm != None and len(self.norm) != 1:
         for Dir,weight in zip(self.directories,self.norm):
           weight = int(1./weight)
