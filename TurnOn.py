@@ -80,17 +80,8 @@ class TurnOn(object):
         for p in range(TurnOn.GetN()):
           xvalAtPoint = r.Double(0)            
           TurnOn.GetPoint(p,xvalAtPoint,efficiency)
-          # TurnOn.Print()
-          # if xvalAtPoint != xVal:
           ErrorYhigh = r.Double(0.)
           ErrorYlow = r.Double(0.)
-          # print "Eff", efficiency
-          # print  "YLow",TurnOn.GetErrorYlow(p)
-          # print  "Yhigh",TurnOn.GetErrorYhigh(p)
-          # print "Xval",xVal
-          # print "xvalAtPoint",xvalAtPoint
-          # print "p",p
-          # print "TurnOn.GetN()",TurnOn.GetN()
           if xvalAtPoint == xVal:
              ErrorYhigh = TurnOn.GetErrorYhigh(point)
              ErrorYlow = TurnOn.GetErrorYlow(point)
