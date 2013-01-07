@@ -291,6 +291,14 @@ class Print(object):
         self.canvas.SetLogy(r.kFALSE)
     pass
 
+  def SetGrid(self,BOOL):
+    """docstring for SetGrid"""
+    if BOOL:
+      self.canvas.SetGrid()
+    else:
+      self.canvas.SetGrid(r.kFALSE)
+    pass
+
 
   def Print(self):
     """docstring for Print"""
