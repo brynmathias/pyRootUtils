@@ -7,7 +7,6 @@ import argparse
 import errno
 import os
 
-
 def ensure_dir(path):
     try:
       os.makedirs(path)
@@ -25,17 +24,11 @@ def haddF(ofName = None, ifList = [] ):
     for f in ifList: ifStr+="%s "%(f)    
     cmd = ["hadd "+ofName+ ifStr]
     subprocess.call(cmd,shell=True)
-
-
-    
-    
     
 def getList(path = None):
     l = glob.glob(path+"/*.root")
     return l
     
-
-
 
 def main():
     """docstring for main"""
@@ -47,34 +40,20 @@ def main():
     if args.inputFile[-1]=="/":args.inputFile= args.inputFile[:-1]
     if args.inputFile[1]=="/":args.inputFile= args.inputFile[1:]
      tmpDir = "./tmp_%s/"%(args.inputFile)
-    print tmpDir
     ensure_dir(tmpDir)
     Threads = []
     listOfFiles = getList(path=args.inputFile)
     jList = chunks(listOfFiles,args.nThreads)
     for i,c in enumerate(jList):
-        Threads.append(threading.Thread(group = None, target = haddF,args=(tmpDir+args.inputFile[:-1]+"_part%i.root"%(i),c)))
+        Threads.append(threading.Thread(group = None, target = haddF,args=(tmpDir+args.inputFile+"_part%i.root"%(i),c)))
     for t in Threads:
         t.start()
     for t in Threads:
         t.join()
     
-    
     partList = getList(tmpDir)
     haddF("./"+args.inputFile+".root",partList)
 
 
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
     main()
-
-
-
-
