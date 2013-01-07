@@ -81,7 +81,20 @@ def SetBatch():
 #       cumulativeHist.SetBinError(bin,err)
 #     return cumulativeHist
 
-
+def threeToTwo(h3) :
+    name = h3.GetName()
+    binsz = h3.GetNbinsZ()
+    h2 = r.TH2D(name+"_2D",h3.GetTitle(),
+                h3.GetNbinsX(), h3.GetXaxis().GetXmin(), h3.GetXaxis().GetXmax(),
+                h3.GetNbinsY(), h3.GetYaxis().GetXmin(), h3.GetYaxis().GetXmax(),
+                )
+                
+    for iX in range(1, 1+h3.GetNbinsX()) :
+        for iY in range(1, 1+h3.GetNbinsY()) :
+            content = h3.GetBinContent(iX, iY, 1) + h3.GetBinContent(iX, iY, 2)+ h3.GetBinContent(iX, iY, 0)
+            h2.SetBinContent(iX, iY, content)
+    h2.GetZaxis().SetTitle(h3.GetZaxis().GetTitle())
+    return h2
 
 
 class GetSumHist(object):
@@ -97,6 +110,7 @@ class GetSumHist(object):
     self.legendText = LegendText
     self.isData = False
     self.hObj = None
+    self.checkList()
     self.returnHist()
     self.cumulativeHist = None
     self.checkErrors = False
@@ -104,6 +118,10 @@ class GetSumHist(object):
 
     if self.checkErrors:
       self.CheckErrors()
+  def checkList(self):
+      if not isinstance(self.hist,list):
+          self.hist = [self.hist]
+      else: pass      
   """docstring for GetSumHist"""
   def returnHist(self):
     """docstring for returnHist"""
@@ -127,10 +145,11 @@ class GetSumHist(object):
               print "Subdirectory %s does not exist in %s"%(Dir,f)
               self.hObj = r.TH1D()
               return self.hObj
-          h = hf.Get(self.hist)
-          if self.hObj is None:
-            self.hObj = h.Clone()
-          else: self.hObj.Add(h)
+          for histName in self.hist:
+              h = hf.Get(histName)
+              if self.hObj is None:
+                self.hObj = h.Clone()
+              else: self.hObj.Add(h)
       if self.norm != None and len(self.norm) != 1:
         for Dir,weight in zip(self.directories,self.norm):
           weight = int(1./weight)
@@ -256,9 +275,9 @@ class Print(object):
   def open(self):
     """docstring for open"""
     self.canvas.Print(self.fname+"[")
-    r.gPad.SetRightMargin(0.1)
-    r.gPad.SetLeftMargin(0.1)
-    r.gPad.SetTopMargin(0.05)
+    r.gPad.SetRightMargin(0.05)
+    r.gPad.SetLeftMargin(0.15)
+    r.gPad.SetTopMargin(0.07)
     r.gPad.SetBottomMargin(0.15)
     
     pass
