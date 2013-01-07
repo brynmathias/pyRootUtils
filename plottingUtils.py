@@ -20,8 +20,8 @@ def MakeCumu(inHist):
     maxbin = inHist.GetNbinsX()+1
     for bin in range(0,maxbin):
       err = r.Double(0)
-      val = inHist.IntegralAndError(0, bin, err)
-      # val = inHist.IntegralAndError(bin, maxbin, err)
+      # val = inHist.IntegralAndError(0, bin, err)
+      val = inHist.IntegralAndError(bin, maxbin, err)
       err = math.sqrt(val) if val > 9 else max(el[int(val)],eh[int(val)])
       cumulativeHist.SetBinContent(bin,val)
       cumulativeHist.SetBinError(bin,err)
@@ -84,7 +84,6 @@ def SetBatch():
 def threeToTwo(h3) :
     name = h3.GetName()
     binsz = h3.GetNbinsZ()
-    print binsz
     h2 = r.TH2D(name+"_2D",h3.GetTitle(),
                 h3.GetNbinsX(), h3.GetXaxis().GetXmin(), h3.GetXaxis().GetXmax(),
                 h3.GetNbinsY(), h3.GetYaxis().GetXmin(), h3.GetYaxis().GetXmax(),
@@ -111,6 +110,7 @@ class GetSumHist(object):
     self.legendText = LegendText
     self.isData = False
     self.hObj = None
+    self.checkList()
     self.returnHist()
     self.cumulativeHist = None
     self.checkErrors = False
@@ -118,6 +118,10 @@ class GetSumHist(object):
 
     if self.checkErrors:
       self.CheckErrors()
+  def checkList(self):
+      if not isinstance(self.hist,list):
+          self.hist = [self.hist]
+      else: pass      
   """docstring for GetSumHist"""
   def returnHist(self):
     """docstring for returnHist"""
@@ -271,9 +275,9 @@ class Print(object):
   def open(self):
     """docstring for open"""
     self.canvas.Print(self.fname+"[")
-    r.gPad.SetRightMargin(0.15)
-    r.gPad.SetLeftMargin(0.1)
-    r.gPad.SetTopMargin(0.05)
+    r.gPad.SetRightMargin(0.05)
+    r.gPad.SetLeftMargin(0.15)
+    r.gPad.SetTopMargin(0.07)
     r.gPad.SetBottomMargin(0.15)
     
     pass

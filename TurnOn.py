@@ -94,14 +94,16 @@ class TurnOn(object):
           if xvalAtPoint == xVal:
              ErrorYhigh = TurnOn.GetErrorYhigh(point)
              ErrorYlow = TurnOn.GetErrorYlow(point)
+             if ErrorYlow > 1E16 or ErrorYlow < 0.: ErrorYlow = 1.
+             if ErrorYhigh > 1E16 or ErrorYhigh < 0.: ErrorYhigh = 1.
              break
         # print "Error ylow = %f, Error yHigh = %f, xVal = %f, xvalAtPoint = %f graphName = %s"%(ErrorYlow,ErrorYhigh, xVal,xvalAtPoint,TurnOn.GetTitle())
         if denominator.GetBinContent(bin) > 0.:
           if self.Debug: print ErrorYhigh, bin, denominator.GetBinLowEdge(bin), denominator.GetBinContent(bin)
-          if ErrorYhigh**2 > 0.:  w_i_plus = 1./(ErrorYhigh**2)
+          if ErrorYhigh**2 > 0.:w_i_plus = 1./(ErrorYhigh**2)
           else: w_i_plus = 1.
           sum_w_i_plus += w_i_plus
-          if ErrorYlow**2 > 0. :w_i_minus = 1./(ErrorYlow**2)
+          if ErrorYlow**2 > 0. :w_i_minus = 1./(ErrorYlow**2)              
           else: w_i_minus = 1.
           sum_w_i_minus += w_i_minus
           w_i = max(w_i_minus,w_i_plus)
