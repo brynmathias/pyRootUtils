@@ -55,10 +55,10 @@ class TurnOn(object):
     self.finalPlot = r.TGraphAsymmErrors()
     self.finalPlot.Divide(self.TotNumerator,self.TotDenominator)
     for point in range(self.finalPlot.GetN()):
-      sum_w_i = 0.
-      sum_w_i_plus = 0.
-      sum_w_i_minus = 0.
-      sum_eff_times_w_i = 0.
+      sum_w_i = r.Double(0.)
+      sum_w_i_plus = r.Double(0.)
+      sum_w_i_minus = r.Double(0.)
+      sum_eff_times_w_i = r.Double(0.)
       xVal = r.Double(0)
       tmp = r.Double(0)
       self.finalPlot.GetPoint(point,xVal,tmp)
@@ -72,9 +72,9 @@ class TurnOn(object):
       for TurnOn,denominator in zip(self.listOfTurnOns,self.denominator):
         efficiency = r.Double(0)
         xvalAtPoint = r.Double(0)
-        w_i = 0.
-        ErrorYhigh = 0.
-        ErrorYlow  = 0.
+        w_i = r.Double(0.)
+        ErrorYhigh = r.Double(0.)
+        ErrorYlow  = r.Double(0.)
         TurnOn.SetTitle(denominator.GetTitle())
         TurnOn.GetPoint(point,xvalAtPoint,efficiency)
         for p in range(TurnOn.GetN()):
@@ -82,8 +82,8 @@ class TurnOn(object):
           TurnOn.GetPoint(p,xvalAtPoint,efficiency)
           # TurnOn.Print()
           # if xvalAtPoint != xVal:
-          ErrorYhigh = 0.
-          ErrorYlow = 0.
+          ErrorYhigh = r.Double(0.)
+          ErrorYlow = r.Double(0.)
           # print "Eff", efficiency
           # print  "YLow",TurnOn.GetErrorYlow(p)
           # print  "Yhigh",TurnOn.GetErrorYhigh(p)
@@ -98,12 +98,25 @@ class TurnOn(object):
         # print "Error ylow = %f, Error yHigh = %f, xVal = %f, xvalAtPoint = %f graphName = %s"%(ErrorYlow,ErrorYhigh, xVal,xvalAtPoint,TurnOn.GetTitle())
         if denominator.GetBinContent(bin) > 0.:
           if self.Debug: print ErrorYhigh, bin, denominator.GetBinLowEdge(bin), denominator.GetBinContent(bin)
-          if ErrorYhigh**2 > 0.:  w_i_plus = 1./(ErrorYhigh**2)
+          
+          try:
+            valHighErrY = ErrorYhigh**2
+          except OverflowError:
+            valHighErrY = 0.
+          if valHighErrY > 0.:  w_i_plus = r.Double(1./(ErrorYhigh**2))
           else: w_i_plus = 1.
+          
           sum_w_i_plus += w_i_plus
-          if ErrorYlow**2 > 0. :w_i_minus = 1./(ErrorYlow**2)
+
+          try:
+            valLowErrY = ErrorYlow**2
+          except OverflowError:
+            valLowErrY = 0.
+          if valLowErrY > 0.: w_i_minus = 1./valLowErrY
           else: w_i_minus = 1.
+          
           sum_w_i_minus += w_i_minus
+          
           w_i = max(w_i_minus,w_i_plus)
           sum_w_i += w_i
           sum_eff_times_w_i += (efficiency*w_i)
